@@ -6,22 +6,84 @@
 
 #include "mpc.h"
 
-long lispy_eval_operation(char* operator, long a, long b) {
-  if(strcmp(operator, "+") == 0) { return a + b; }
-  if(strcmp(operator, "-") == 0) { return a - b; }
-  if(strcmp(operator, "*") == 0) { return a * b; }
-  if(strcmp(operator, "/") == 0) { return a / b; }
-  return 0;
+typedef struct {
+  int type;
+  long number;
+  int error;
+} lval;
+
+/* lval errors */
+enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
+
+/* lval types */
+enum { LVAL_NUM, LVAL_ERR };
+
+lval lval_number(long number) {
+  lval value;
+  value.type = LVAL_NUM;
+  value.number = number;
+  return value;
 }
 
-long lispy_eval(mpc_ast_t *t) {
+lval lval_error(int error_type) {
+  lval error;
+  error.type = LVAL_ERR;
+  error.error = error_type;
+  return error;
+}
+
+void lval_print(lval v) {
+  switch(v.type) {
+    case LVAL_NUM:
+      printf("%li", v.number);
+      break;
+
+    case LVAL_ERR:
+      if (v.error == LERR_DIV_ZERO) {
+        printf("Error: Division By Zero!");
+      }
+      if (v.error == LERR_BAD_OP)   {
+        printf("Error: Invalid Operator!");
+      }
+      if (v.error == LERR_BAD_NUM)  {
+        printf("Error: Invalid Number!");
+      }
+      break;
+  }
+}
+
+void lval_println(lval v) {
+  lval_print(v);
+  putchar('\n');
+}
+
+lval lispy_eval_operation(char* operator, lval a, lval b) {
+  if (a.type == LVAL_ERR) { return a; }
+  if (b.type == LVAL_ERR) { return b; }
+
+  if(strcmp(operator, "+") == 0) { return lval_number(a.number + b.number); }
+  if(strcmp(operator, "-") == 0) { return lval_number(a.number - b.number); }
+  if(strcmp(operator, "*") == 0) { return lval_number(a.number * b.number); }
+  if(strcmp(operator, "/") == 0) {
+    return b.number == 0
+      ? lval_error(LERR_DIV_ZERO)
+      : lval_number(a.number / b.number);
+  }
+
+  return lval_error(LERR_BAD_OP);
+}
+
+lval lispy_eval(mpc_ast_t *t) {
   if(strstr(t->tag, "number")) {
-    return atoi(t->contents);
+    errno = 0;
+    long x = strtol(t->contents, NULL, 10);
+
+    return errno != ERANGE ? lval_number(x) : lval_error(LERR_BAD_NUM);
   }
 
   char *operator = t->children[1]->contents;
 
-  long result = lispy_eval(t->children[2]);
+  lval result = lispy_eval(t->children[2]);
 
   for(int i=3; i < t->children_num; i++) {
     if(strstr(t->children[i]->tag, "expression")) {
@@ -57,7 +119,7 @@ int main(int argc, char **argv) {
     mpc_result_t result;
 
     if(mpc_parse("<stdin>", input, Lispy, &result)) {
-      printf("%ld\n", lispy_eval(result.output));
+      lval_println(lispy_eval(result.output));
       mpc_ast_delete(result.output);
     } else {
       mpc_err_print(result.error);
