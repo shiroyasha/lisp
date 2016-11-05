@@ -6,8 +6,33 @@
 
 #include "mpc.h"
 
-int main(int argc, char **argv) {
+long lispy_eval_operation(char* operator, long a, long b) {
+  if(strcmp(operator, "+") == 0) { return a + b; }
+  if(strcmp(operator, "-") == 0) { return a - b; }
+  if(strcmp(operator, "*") == 0) { return a * b; }
+  if(strcmp(operator, "/") == 0) { return a / b; }
+  return 0;
+}
 
+long lispy_eval(mpc_ast_t *t) {
+  if(strstr(t->tag, "number")) {
+    return atoi(t->contents);
+  }
+
+  char *operator = t->children[1]->contents;
+
+  long result = lispy_eval(t->children[2]);
+
+  for(int i=3; i < t->children_num; i++) {
+    if(strstr(t->children[i]->tag, "expression")) {
+      result = lispy_eval_operation(operator, result, lispy_eval(t->children[i]));
+    }
+  }
+
+  return result;
+}
+
+int main(int argc, char **argv) {
   mpc_parser_t* Number     = mpc_new("number");
   mpc_parser_t* Operator   = mpc_new("operator");
   mpc_parser_t* Expression = mpc_new("expression");
@@ -32,7 +57,7 @@ int main(int argc, char **argv) {
     mpc_result_t result;
 
     if(mpc_parse("<stdin>", input, Lispy, &result)) {
-      mpc_ast_print(result.output);
+      printf("%ld\n", lispy_eval(result.output));
       mpc_ast_delete(result.output);
     } else {
       mpc_err_print(result.error);
