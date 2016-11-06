@@ -6,23 +6,40 @@
 
 #include "mpc.h"
 
-typedef struct lval {
+struct lval;
+struct lenv;
+
+enum { LVAL_NUM, LVAL_ERR, LVAL_FUN, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR };
+
+typedef struct lval lval;
+typedef struct lenv lenv;
+
+typedef lval*(*lbuiltin)(lenv*, lval*);
+
+struct lval {
   int type;
   long number;
 
   char* error;
   char* symbol;
 
+  lbuiltin fun;
+
   int count;
   struct lval** cell;
-} lval;
+};
+
+struct lenv {
+  int count;
+
+  char** symbols;
+  lval** values;
+};
 
 
 /*
  * lval constructors
  */
-
-enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR };
 
 lval* lval_number(long number) {
   lval* value = malloc(sizeof(lval));
@@ -63,6 +80,13 @@ lval* lval_qexpr(void) {
   return value;
 }
 
+lval* lval_fun(lbuiltin fun) {
+  lval* value = malloc(sizeof(lval));
+  value->type = LVAL_FUN;
+  value->fun  = fun;
+  return value;
+}
+
 
 /*
  * lval destructor
@@ -70,6 +94,7 @@ lval* lval_qexpr(void) {
 
 void lval_delete(lval* value) {
   switch(value->type) {
+    case LVAL_FUN:
     case LVAL_NUM:
       break;
 
@@ -116,11 +141,12 @@ void lval_expr_print(lval* value, char open, char close) {
 
 void lval_print(lval* value) {
   switch(value->type) {
-    case LVAL_NUM: printf("%li", value->number); break;
-    case LVAL_ERR: printf("ERROR: %s",  value->error); break;
-    case LVAL_SYM: printf("%s",  value->symbol); break;
-    case LVAL_SEXPR: lval_expr_print(value, '(', ')'); break;
-    case LVAL_QEXPR: lval_expr_print(value, '{', '}'); break;
+    case LVAL_FUN:   printf("<function>");               break;
+    case LVAL_NUM:   printf("%li", value->number);       break;
+    case LVAL_ERR:   printf("ERROR: %s",  value->error); break;
+    case LVAL_SYM:   printf("%s",  value->symbol);       break;
+    case LVAL_SEXPR: lval_expr_print(value, '(', ')');   break;
+    case LVAL_QEXPR: lval_expr_print(value, '{', '}');   break;
   }
 }
 
@@ -128,10 +154,6 @@ void lval_println(lval* v) {
   lval_print(v);
   putchar('\n');
 }
-
-/*
- * evaluation
- */
 
 lval* lval_pop(lval* value, int index) {
   lval* x = value->cell[index];
@@ -165,6 +187,98 @@ lval* lval_join(lval* a, lval* b) {
 
   lval_delete(b);
   return a;
+}
+
+lval* lval_copy(lval* a) {
+  lval* b = malloc(sizeof(lval*));
+  b->type = a->type;
+
+  switch(a->type) {
+    case LVAL_FUN:
+      b->fun = a->fun;
+      break;
+
+    case LVAL_NUM:
+      b->number = a->number;
+      break;
+
+    case LVAL_ERR:
+      b->error = malloc(strlen(a->error) + 1);
+      strcpy(b->error, a->error);
+      break;
+
+    case LVAL_SYM:
+      b->symbol = malloc(strlen(a->symbol) + 1);
+      strcpy(b->symbol, a->symbol);
+      break;
+
+    case LVAL_SEXPR:
+    case LVAL_QEXPR:
+      b->count = a->count;
+      b->cell = malloc(sizeof(lval*) * a->count);
+
+      for(int i=0; i < a->count; i++) {
+        b->cell[i] = lval_copy(a->cell[i]);
+      }
+
+      break;
+  }
+
+  return b;
+}
+
+/*
+ * lenv
+ */
+
+lenv* lenv_new(void) {
+  lenv* e = malloc(sizeof(lenv));
+  e->count = 0;
+  e->symbols = NULL;
+  e->values = NULL;
+  return e;
+}
+
+void lenv_del(lenv* e) {
+  for (int i = 0; i < e->count; i++) {
+    free(e->symbols[i]);
+    lval_delete(e->values[i]);
+  }
+
+  free(e->symbols);
+  free(e->values);
+  free(e);
+}
+
+lval* lenv_get(lenv* env, lval* key) {
+  for(int i=0; i < env->count; i++) {
+    if(strcmp(env->symbols[i], key->symbol)) {
+      return lval_copy(env->values[i]);
+    }
+  }
+
+  return lval_error("unbound symbol");
+}
+
+lenv* lenv_put(lenv* env, lval* key, lval* value) {
+  for(int i=0; i < env->count; i++) {
+    if(strcmp(env->symbols[i], key->symbol)) {
+      lval_delete(env->values[i]);
+
+      env->values[i] = lval_copy(value);
+    }
+  }
+
+  env->count++;
+  env->symbols = realloc(env->symbols, sizeof(lval*) * env->count);
+  env->values  = realloc(env->values, sizeof(char*) * env->count);
+
+  env->symbols[env->count - 1] = malloc(strlen(key->symbol) + 1);
+  env->values[env->count - 1] = lval_copy(value);
+
+  strcpy(env->symbols[env->count - 1], key->symbol);
+
+  return env;
 }
 
 /*
@@ -311,6 +425,10 @@ lval* builtin(char* operator, lval* elements) {
 
   return lval_error("Unrecognized operator");
 }
+
+/*
+ * evaluation
+ */
 
 lval* lval_eval_sexpr(lval* value) {
   /* evaluate every child */
