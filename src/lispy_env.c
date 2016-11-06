@@ -38,6 +38,8 @@ lval* lenv_get(lenv* env, lval* key) {
 }
 
 void lenv_put(lenv* env, lval* key, lval* value) {
+  if(env->parent) { return lenv_put(env->parent, key, value); }
+
   for(int i=0; i < env->count; i++) {
     if(strcmp(env->symbols[i], key->symbol) == 0) {
       lval_delete(env->values[i]);
