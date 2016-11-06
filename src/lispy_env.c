@@ -30,7 +30,11 @@ lval* lenv_get(lenv* env, lval* key) {
     }
   }
 
-  return lval_error("unbound symbol");
+  if(env->parent) {
+    return lenv_get(env, key);
+  } else {
+    return lval_error("unbound symbol");
+  }
 }
 
 void lenv_put(lenv* env, lval* key, lval* value) {
