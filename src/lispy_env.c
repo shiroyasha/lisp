@@ -5,9 +5,10 @@
 
 lenv* lenv_new(void) {
   lenv* e = malloc(sizeof(lenv));
-  e->count = 0;
+  e->parent  = NULL;
+  e->count   = 0;
   e->symbols = NULL;
-  e->values = NULL;
+  e->values  = NULL;
   return e;
 }
 
@@ -59,4 +60,22 @@ void lenv_add_builtin(lenv* e, char* name, lbuiltin builtin) {
   lenv_put(e, k, v);
   lval_delete(k);
   lval_delete(v);
+}
+
+lenv* lenv_copy(lenv* e) {
+  lenv* n = malloc(sizeof(lenv));
+
+  n->parent  = e->parent;
+  n->count   = e->count;
+  n->symbols = malloc(sizeof(char*) * n->count);
+  n->values  = malloc(sizeof(lval*) * n->count);
+
+  for (int i = 0; i < e->count; i++) {
+    n->symbols[i] = malloc(strlen(e->symbols[i]) + 1);
+    strcpy(n->symbols[i], e->symbols[i]);
+
+    n->values[i] = lval_copy(e->values[i]);
+  }
+
+  return n;
 }

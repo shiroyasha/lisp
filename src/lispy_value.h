@@ -10,7 +10,7 @@ lval* lval_symbol(char* symbol);
 lval* lval_sexpr(void);
 lval* lval_qexpr(void);
 lval* lval_builtin(lbuiltin fun);
-lval* lval_lambda(lbuiltin fun);
+lval* lval_lambda(lval* formals, lval* body);
 
 /* destructor */
 

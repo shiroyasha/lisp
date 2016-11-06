@@ -137,6 +137,7 @@ lval* builtin_def(lenv* env, lval* value) {
   /* ensure that all elements of the symbol list are symbols */
   for(int i=0; i < symbol_list->count; i++) {
     if(symbol_list->cell[i]->type != LVAL_SYM) {
+      lval_delete(symbol_list);
       return lval_error("Function def cannot define non-symbol");
     }
   }
@@ -150,4 +151,24 @@ lval* builtin_def(lenv* env, lval* value) {
   }
 
   return lval_sexpr();
+}
+
+lval* builtin_lambda(lenv* env, lval* value) {
+  if(value->count != 2)                  { return lval_error("Function \\ expects exactly two arguments"); }
+  if(value->cell[0]->type != LVAL_QEXPR) { return lval_error("Function \\ expects its first argument to be a Q-Expression"); }
+  if(value->cell[1]->type != LVAL_QEXPR) { return lval_error("Function \\ expects its second argument to be a Q-Expression"); }
+
+  lval* symbol_list = lval_pop(value, 0);
+
+  /* ensure that all elements of the symbol list are symbols */
+  for(int i=0; i < symbol_list->count; i++) {
+    if(symbol_list->cell[i]->type != LVAL_SYM) {
+      lval_delete(symbol_list);
+      return lval_error("Parameter list must contain only symbols");
+    }
+  }
+
+  lval* body = lval_pop(value, 0);
+
+  return lval_lambda(symbol_list, body);
 }

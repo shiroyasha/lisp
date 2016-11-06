@@ -50,10 +50,17 @@ lval* lval_builtin(lbuiltin builtin) {
   return value;
 }
 
-lval* lval_lambda(lbuiltin builtin) {
+lval* lval_lambda(lval* formals, lval* body) {
   lval* value    = malloc(sizeof(lval));
   value->type    = LVAL_FUN;
   value->builtin = NULL;
+
+  /* Build new environment */
+  value->env = lenv_new();
+
+  /* Set Formals and Body */
+  value->formals = formals;
+  value->body = body;
 
   return value;
 }
@@ -61,6 +68,13 @@ lval* lval_lambda(lbuiltin builtin) {
 void lval_delete(lval* value) {
   switch(value->type) {
     case LVAL_FUN:
+      if (!value->builtin) {
+        lenv_delete(value->env);
+        lval_delete(value->formals);
+        lval_delete(value->body);
+      }
+      break;
+
     case LVAL_NUM:
       break;
 
@@ -99,9 +113,21 @@ void lval_expr_print(lval* value, char open, char close) {
   putchar(close);
 }
 
+void lval_print_fun(lval* value) {
+  if(value->builtin) {
+    printf("<function>");
+  } else {
+    printf("(\\ ");
+    lval_print(value->formals);
+    printf(" ");
+    lval_print(value->body);
+    printf(")");
+  }
+}
+
 void lval_print(lval* value) {
   switch(value->type) {
-    case LVAL_FUN:   printf("<function>");               break;
+    case LVAL_FUN:   lval_print_fun(value);              break;
     case LVAL_NUM:   printf("%li", value->number);       break;
     case LVAL_ERR:   printf("ERROR: %s",  value->error); break;
     case LVAL_SYM:   printf("%s",  value->symbol);       break;
@@ -155,7 +181,14 @@ lval* lval_copy(lval* a) {
 
   switch(a->type) {
     case LVAL_FUN:
-      b->builtin = a->builtin;
+      if(a->builtin) {
+        b->builtin = a->builtin;
+      } else {
+        b->builtin = NULL;
+        b->env     = lenv_copy(a->env);
+        b->formals = lval_copy(a->formals);
+        b->body    = lval_copy(a->body);
+      }
       break;
 
     case LVAL_NUM:

@@ -40,8 +40,9 @@ int main(int argc, char **argv) {
   lenv_add_builtin(env, "eval", builtin_eval);
   lenv_add_builtin(env, "join", builtin_join);
 
-  /* def */
+  /* functions */
   lenv_add_builtin(env, "def", builtin_def);
+  lenv_add_builtin(env, "\\", builtin_lambda);
 
   puts("Lispy Version 0.1.0");
   puts("Hit Ctrl+c to Exit\n");

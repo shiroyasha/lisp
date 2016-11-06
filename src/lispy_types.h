@@ -19,14 +19,22 @@ struct lval {
   char* error;
   char* symbol;
 
+  /* functions */
   lbuiltin builtin;
 
+  lenv* env;
+  lval* formals;
+  lval* body;
+
+  /* lists */
   int count;
   struct lval** cell;
 };
 
 struct lenv {
   int count;
+
+  struct lenv* parent;
 
   char** symbols;
   lval** values;
