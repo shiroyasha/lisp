@@ -22,7 +22,7 @@ typedef struct lval {
  * lval constructors
  */
 
-enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR };
+enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR };
 
 lval* lval_number(long number) {
   lval* value = malloc(sizeof(lval));
@@ -55,6 +55,14 @@ lval* lval_sexpr(void) {
   return value;
 }
 
+lval* lval_qexpr(void) {
+  lval* value = malloc(sizeof(lval));
+  value->type = LVAL_QEXPR;
+  value->count = 0;
+  value->cell = NULL;
+  return value;
+}
+
 /*
  * lval destructor
  */
@@ -73,6 +81,7 @@ void lval_delete(lval* value) {
       break;
 
     case LVAL_SEXPR:
+    case LVAL_QEXPR:
       for(int i=0; i < value->count; i++) {
         lval_delete(value->cell[i]);
       }
@@ -110,6 +119,7 @@ void lval_print(lval* value) {
     case LVAL_ERR: printf("ERROR: %s",  value->error); break;
     case LVAL_SYM: printf("%s",  value->symbol); break;
     case LVAL_SEXPR: lval_expr_print(value, '(', ')'); break;
+    case LVAL_QEXPR: lval_expr_print(value, '{', '}'); break;
   }
 }
 
@@ -268,6 +278,7 @@ lval* lval_read(mpc_ast_t *t) {
   lval* x = NULL;
   if (strcmp(t->tag, ">") == 0) { x = lval_sexpr(); }
   if (strstr(t->tag, "sexpr"))  { x = lval_sexpr(); }
+  if (strstr(t->tag, "qexpr"))  { x = lval_qexpr(); }
 
   /* Fill this list with any valid expression contained within */
   for (int i = 0; i < t->children_num; i++) {
