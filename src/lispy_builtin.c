@@ -121,12 +121,14 @@ lval* builtin_join(lenv* env, lval* value) {
 
 lval* builtin_eval(lenv* env, lval* value) {
   if(value->count != 1)         { return lval_error("Function eval expects one argument"); }
-  if(value->type == LVAL_QEXPR) { return lval_error("Function eval called with incorect datatype"); }
+  if(value->cell[0]->type != LVAL_QEXPR) { return lval_error("Function eval called with incorect datatype"); }
 
-  lval* result = lval_pop(value, 0);
-  result->type = LVAL_SEXPR;
+  lval* code = lval_pop(value, 0);
+  code->type = LVAL_SEXPR;
 
-  return lval_eval(env, result);
+  lval* result = lval_eval(env, code);
+
+  return result;
 }
 
 lval* builtin_def(lenv* env, lval* value) {

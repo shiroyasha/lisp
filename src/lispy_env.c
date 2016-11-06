@@ -31,7 +31,7 @@ lval* lenv_get(lenv* env, lval* key) {
   }
 
   if(env->parent) {
-    return lenv_get(env, key);
+    return lenv_get(env->parent, key);
   } else {
     return lval_error("unbound symbol");
   }
@@ -40,7 +40,6 @@ lval* lenv_get(lenv* env, lval* key) {
 void lenv_put(lenv* env, lval* key, lval* value) {
   for(int i=0; i < env->count; i++) {
     if(strcmp(env->symbols[i], key->symbol) == 0) {
-      printf("inside\n");
       lval_delete(env->values[i]);
 
       env->values[i] = lval_copy(value);
@@ -82,4 +81,15 @@ lenv* lenv_copy(lenv* e) {
   }
 
   return n;
+}
+
+void lenv_print(lenv* e) {
+  for (int i = 0; i < e->count; i++) {
+    printf("%s: ", e->symbols[i]);
+    lval_println(e->values[i]);
+  }
+
+  if(e->parent) {
+    lenv_print(e->parent);
+  }
 }

@@ -3,6 +3,33 @@
 
 #include "lispy.h"
 
+lval* lval_call(lenv* env, lval* fun, lval* arguments) {
+  /* call builtin functions */
+  if(fun->builtin) { return fun->builtin(env, arguments); }
+
+  int given = arguments->count;
+  int expected = fun->formals->count;
+
+  /* raise error if not enough arguments were passed */
+  if(given != expected) { return lval_error("Function called with non adequate number of arguments"); }
+
+  for(int i=0; i < given; i++) {
+    lval* symbol = lval_pop(fun->formals, 0);
+    lval* value  = lval_pop(arguments, 0);
+
+    lenv_put(fun->env, symbol, value);
+
+    lval_delete(symbol);
+    lval_delete(value);
+  }
+
+  fun->env->parent = env;
+
+  lval* code = lval_add(lval_sexpr(), lval_copy(fun->body));
+
+  return builtin_eval(fun->env, code);
+}
+
 lval* lval_eval_sexpr(lenv* env, lval* value) {
   /* evaluate every child */
   for(int i=0; i < value->count; i++) {
@@ -28,7 +55,7 @@ lval* lval_eval_sexpr(lenv* env, lval* value) {
     return lval_error("First value is not a function");
   }
 
-  lval* result = f->builtin(env, value);
+  lval* result = lval_call(env, f, value);
   lval_delete(f);
   lval_delete(value);
   return result;
