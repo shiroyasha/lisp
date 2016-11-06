@@ -300,7 +300,7 @@ int main(int argc, char **argv) {
     ",
     Number, Symbol, SExpression, Expression, Lispy);
 
-  puts("Lispy Version 0.0.2");
+  puts("Lispy Version 0.1.0");
   puts("Hit Ctrl+c to Exit\n");
 
   while(1) {
