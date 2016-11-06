@@ -128,3 +128,26 @@ lval* builtin_eval(lenv* env, lval* value) {
 
   return lval_eval(env, result);
 }
+
+lval* builtin_def(lenv* env, lval* value) {
+  if(value->cell[0]->type != LVAL_QEXPR)  { return lval_error("Function def called with incorect datatype"); }
+
+  lval* symbol_list = lval_pop(value, 0);
+
+  /* ensure that all elements of the symbol list are symbols */
+  for(int i=0; i < symbol_list->count; i++) {
+    if(symbol_list->cell[i]->type != LVAL_SYM) {
+      return lval_error("Function def cannot define non-symbol");
+    }
+  }
+
+  /* ensure that the number of arguments is the same as the number of symbols */
+  if(symbol_list->count < value->count) { return lval_error("Function def received less symbols than values"); }
+  if(symbol_list->count > value->count) { return lval_error("Function def received more symbols than values"); }
+
+  for(int i=0; i < symbol_list->count; i++) {
+    lenv_put(env, symbol_list->cell[i], value->cell[i]);
+  }
+
+  return lval_sexpr();
+}

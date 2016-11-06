@@ -17,15 +17,7 @@ int main(int argc, char **argv) {
   mpca_lang(MPCA_LANG_DEFAULT,
     "                                                  \
     number : /-?[0-9]+/ ;                              \
-    symbol : \"list\"                                  \
-           | \"head\"                                  \
-           | \"tail\"                                  \
-           | \"join\"                                  \
-           | \"eval\"                                  \
-           | '+'                                       \
-           | '-'                                       \
-           | '*'                                       \
-           | '/' ;                                     \
+    symbol : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ;        \
     sexpr  : '(' <expr>* ')' ;                         \
     qexpr  : '{' <expr>* '}' ;                         \
     expr   : <number> | <symbol> | <sexpr> | <qexpr> ; \
@@ -47,6 +39,9 @@ int main(int argc, char **argv) {
   lenv_add_builtin(env, "tail", builtin_tail);
   lenv_add_builtin(env, "eval", builtin_eval);
   lenv_add_builtin(env, "join", builtin_join);
+
+  /* def */
+  lenv_add_builtin(env, "def", builtin_def);
 
   puts("Lispy Version 0.1.0");
   puts("Hit Ctrl+c to Exit\n");
