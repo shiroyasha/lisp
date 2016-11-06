@@ -107,7 +107,7 @@ void lval_expr_print(lval* value, char open, char close) {
 void lval_print(lval* value) {
   switch(value->type) {
     case LVAL_NUM: printf("%li", value->number); break;
-    case LVAL_ERR: printf("%s",  value->error); break;
+    case LVAL_ERR: printf("ERROR: %s",  value->error); break;
     case LVAL_SYM: printf("%s",  value->symbol); break;
     case LVAL_SEXPR: lval_expr_print(value, '(', ')'); break;
   }
@@ -122,42 +122,125 @@ void lval_println(lval* v) {
  * evaluation
  */
 
-/* lval lispy_eval_operation(char* operator, lval a, lval b) { */
-/*   if (a.type == LVAL_ERR) { return a; } */
-/*   if (b.type == LVAL_ERR) { return b; } */
+lval* lval_pop(lval* value, int index) {
+  lval* x = value->cell[index];
 
-/*   if(strcmp(operator, "+") == 0) { return lval_number(a.number + b.number); } */
-/*   if(strcmp(operator, "-") == 0) { return lval_number(a.number - b.number); } */
-/*   if(strcmp(operator, "*") == 0) { return lval_number(a.number * b.number); } */
-/*   if(strcmp(operator, "/") == 0) { */
-/*     return b.number == 0 */
-/*       ? lval_error(LERR_DIV_ZERO) */
-/*       : lval_number(a.number / b.number); */
-/*   } */
+  memmove(&value->cell[index], &value->cell[index+1], sizeof(lval*) * (value->count - index - 1));
 
-/*   return lval_error(LERR_BAD_OP); */
-/* } */
+  value->count--;
 
-/* lval lispy_eval(mpc_ast_t *t) { */
-/*   if(strstr(t->tag, "number")) { */
-/*     errno = 0; */
-/*     long x = strtol(t->contents, NULL, 10); */
+  value->cell = realloc(value->cell, sizeof(lval*) * value->count);
 
-/*     return errno != ERANGE ? lval_number(x) : lval_error(LERR_BAD_NUM); */
-/*   } */
+  return x;
+}
 
-/*   char *operator = t->children[1]->contents; */
+lval* lval_take(lval* value, int index) {
+  lval* x = lval_pop(value, index);
+  lval_delete(value);
+  return x;
+}
 
-/*   lval result = lispy_eval(t->children[2]); */
+lval* builtin_operation_plus(lval* numbers) {
+  long result = 0;
 
-/*   for(int i=3; i < t->children_num; i++) { */
-/*     if(strstr(t->children[i]->tag, "expression")) { */
-/*       result = lispy_eval_operation(operator, result, lispy_eval(t->children[i])); */
-/*     } */
-/*   } */
+  for(int i=0; i < numbers->count; i++) {
+    result += numbers->cell[i]->number;
+  }
 
-/*   return result; */
-/* } */
+  return lval_number(result);
+}
+
+lval* builtin_operation_minus(lval* numbers) {
+  if(numbers->count == 1) {
+    return lval_number(-numbers->cell[0]->number);
+  }
+
+  long result = numbers->cell[0]->number;
+
+  for(int i=1; i < numbers->count; i++) {
+    result -= numbers->cell[i]->number;
+  }
+
+  return lval_number(result);
+}
+
+lval* builtin_operation_times(lval* numbers) {
+  long result = 1;
+
+  for(int i=0; i < numbers->count; i++) {
+    result *= numbers->cell[i]->number;
+  }
+
+  return lval_number(result);
+}
+
+lval* builtin_operation_divide(lval* numbers) {
+  long result = numbers->cell[0]->number;
+
+  for(int i=1; i < numbers->count; i++) {
+    if(numbers->cell[i]->number == 0) {
+      return lval_error("Division By Zero!");
+    }
+
+    result /= numbers->cell[i]->number;
+  }
+
+  return lval_number(result);
+}
+
+lval* builtin_operation(char* operator, lval* numbers) {
+  for(int i=0; i < numbers->count; i++) {
+    if(numbers->cell[i]->type != LVAL_NUM) {
+      return lval_error("Cannot operate on non-number!");
+    }
+  }
+
+  if(strcmp(operator, "+") == 0) { return builtin_operation_plus(numbers); }
+  if(strcmp(operator, "-") == 0) { return builtin_operation_minus(numbers); }
+  if(strcmp(operator, "*") == 0) { return builtin_operation_times(numbers); }
+  if(strcmp(operator, "/") == 0) { return builtin_operation_divide(numbers); }
+
+  return lval_error("Unrecognized operator");
+}
+
+lval* lval_eval(lval* value);
+
+lval* lval_eval_sexpr(lval* value) {
+  /* evaluate every child */
+  for(int i=0; i < value->count; i++) {
+    value->cell[i] = lval_eval(value->cell[i]);
+  }
+
+  /* check for errors */
+  for(int i=0; i < value->count; i++) {
+    if(value->type == LVAL_ERR) { return lval_take(value, i); }
+  }
+
+  /* empty expression */
+  if(value->count == 0) { return value; }
+
+  /* single value expression */
+  if(value->count == 1) { return lval_take(value, 0); }
+
+  /* ensure that first element is a symbol */
+  lval* f = lval_pop(value, 0);
+  if(f->type != LVAL_SYM) {
+    lval_delete(value);
+    lval_delete(f);
+    return lval_error("S-expression Does not start with symbol!");
+  }
+
+  lval* result = builtin_operation(f->symbol, value);
+  lval_delete(f);
+  lval_delete(value);
+  return result;
+}
+
+lval* lval_eval(lval* value) {
+  if(value->type == LVAL_SEXPR) { return lval_eval_sexpr(value); }
+
+  return value;
+}
 
 /*
  * reader
@@ -227,7 +310,7 @@ int main(int argc, char **argv) {
     mpc_result_t result;
 
     if(mpc_parse("<stdin>", input, Lispy, &result)) {
-      lval* value = lval_read(result.output);
+      lval* value = lval_eval(lval_read(result.output));
       lval_println(value);
       lval_delete(value);
       mpc_ast_delete(result.output);
