@@ -53,9 +53,9 @@ void lenv_put(lenv* env, lval* key, lval* value) {
   strcpy(env->symbols[env->count - 1], key->symbol);
 }
 
-void lenv_add_builtin(lenv* e, char* name, lbuiltin fun) {
+void lenv_add_builtin(lenv* e, char* name, lbuiltin builtin) {
   lval* k = lval_symbol(name);
-  lval* v = lval_fun(fun);
+  lval* v = lval_builtin(builtin);
   lenv_put(e, k, v);
   lval_delete(k);
   lval_delete(v);

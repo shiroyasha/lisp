@@ -19,7 +19,7 @@ struct lval {
   char* error;
   char* symbol;
 
-  lbuiltin fun;
+  lbuiltin builtin;
 
   int count;
   struct lval** cell;

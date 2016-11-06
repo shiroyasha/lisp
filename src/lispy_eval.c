@@ -28,7 +28,7 @@ lval* lval_eval_sexpr(lenv* env, lval* value) {
     return lval_error("First value is not a function");
   }
 
-  lval* result = f->fun(env, value);
+  lval* result = f->builtin(env, value);
   lval_delete(f);
   lval_delete(value);
   return result;

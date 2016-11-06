@@ -42,10 +42,19 @@ lval* lval_qexpr(void) {
   return value;
 }
 
-lval* lval_fun(lbuiltin fun) {
-  lval* value = malloc(sizeof(lval));
-  value->type = LVAL_FUN;
-  value->fun  = fun;
+lval* lval_builtin(lbuiltin builtin) {
+  lval* value    = malloc(sizeof(lval));
+  value->type    = LVAL_FUN;
+  value->builtin = builtin;
+
+  return value;
+}
+
+lval* lval_lambda(lbuiltin builtin) {
+  lval* value    = malloc(sizeof(lval));
+  value->type    = LVAL_FUN;
+  value->builtin = NULL;
+
   return value;
 }
 
@@ -146,7 +155,7 @@ lval* lval_copy(lval* a) {
 
   switch(a->type) {
     case LVAL_FUN:
-      b->fun = a->fun;
+      b->builtin = a->builtin;
       break;
 
     case LVAL_NUM:
