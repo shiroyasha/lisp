@@ -63,6 +63,7 @@ lval* lval_qexpr(void) {
   return value;
 }
 
+
 /*
  * lval destructor
  */
@@ -150,17 +151,45 @@ lval* lval_take(lval* value, int index) {
   return x;
 }
 
-lval* builtin_operation_plus(lval* numbers) {
+lval* lval_add(lval* a, lval* b) {
+  a->count++;
+  a->cell = realloc(a->cell, sizeof(lval*) * a->count);
+  a->cell[a->count-1] = b;
+  return a;
+}
+
+lval* lval_join(lval* a, lval* b) {
+  while(b->count) {
+    a = lval_add(a, lval_pop(b, 0));
+  }
+
+  lval_delete(b);
+  return a;
+}
+
+/*
+ * builtin functions
+ */
+
+lval* builtin_plus(lval* numbers) {
   long result = 0;
 
   for(int i=0; i < numbers->count; i++) {
+    if(numbers->cell[i]->type != LVAL_NUM) {
+      return lval_error("+ cannot operate on non-number!");
+    }
+
     result += numbers->cell[i]->number;
   }
 
   return lval_number(result);
 }
 
-lval* builtin_operation_minus(lval* numbers) {
+lval* builtin_minus(lval* numbers) {
+  if(numbers->cell[0]->type != LVAL_NUM) {
+    return lval_error("- cannot operate on non-number!");
+  }
+
   if(numbers->count == 1) {
     return lval_number(-numbers->cell[0]->number);
   }
@@ -168,26 +197,38 @@ lval* builtin_operation_minus(lval* numbers) {
   long result = numbers->cell[0]->number;
 
   for(int i=1; i < numbers->count; i++) {
+    if(numbers->cell[i]->type != LVAL_NUM) {
+      return lval_error("- cannot operate on non-number!");
+    }
+
     result -= numbers->cell[i]->number;
   }
 
   return lval_number(result);
 }
 
-lval* builtin_operation_times(lval* numbers) {
+lval* builtin_times(lval* numbers) {
   long result = 1;
 
   for(int i=0; i < numbers->count; i++) {
+    if(numbers->cell[i]->type != LVAL_NUM) {
+      return lval_error("* cannot operate on non-number!");
+    }
+
     result *= numbers->cell[i]->number;
   }
 
   return lval_number(result);
 }
 
-lval* builtin_operation_divide(lval* numbers) {
+lval* builtin_divide(lval* numbers) {
   long result = numbers->cell[0]->number;
 
   for(int i=1; i < numbers->count; i++) {
+    if(numbers->cell[i]->type != LVAL_NUM) {
+      return lval_error("/ cannot operate on non-number!");
+    }
+
     if(numbers->cell[i]->number == 0) {
       return lval_error("Division By Zero!");
     }
@@ -198,22 +239,78 @@ lval* builtin_operation_divide(lval* numbers) {
   return lval_number(result);
 }
 
-lval* builtin_operation(char* operator, lval* numbers) {
-  for(int i=0; i < numbers->count; i++) {
-    if(numbers->cell[i]->type != LVAL_NUM) {
-      return lval_error("Cannot operate on non-number!");
-    }
+lval* builtin_list(lval* value) {
+  lval* result = lval_qexpr();
+  result->count = value->count;
+  result->cell = value->cell;
+
+  value->count = 0;
+
+  return result;
+}
+
+lval* builtin_head(lval* value) {
+  if(value->count != 1)                  { return lval_error("Function head expects one argument"); }
+  if(value->cell[0]->type != LVAL_QEXPR) { return lval_error("Function head called with incorect datatype"); }
+  if(value->cell[0]->count == 0)         { return lval_error("Function head called on empty list"); }
+
+  return lval_pop(value->cell[0], 0);
+}
+
+lval* builtin_tail(lval* value) {
+  if(value->count != 1)                  { return lval_error("Function tail expects one argument"); }
+  if(value->cell[0]->type != LVAL_QEXPR) { return lval_error("Function tail called with incorect datatype"); }
+  if(value->cell[0]->count == 0)         { return lval_error("Function tail called on empty list"); }
+
+  lval* first_argument = lval_pop(value, 0);
+  lval* first_element = lval_pop(first_argument, 0);
+
+  lval_delete(first_element);
+
+  return first_argument;
+}
+
+lval* builtin_join(lval* value) {
+  if(value->count == 0) { return lval_error("Function join expects at least one argument"); }
+
+  for (int i = 0; i < value->count; i++) {
+    if(value->cell[i]->type != LVAL_QEXPR) { return lval_error("Function join called with wrong datatype"); }
   }
 
-  if(strcmp(operator, "+") == 0) { return builtin_operation_plus(numbers); }
-  if(strcmp(operator, "-") == 0) { return builtin_operation_minus(numbers); }
-  if(strcmp(operator, "*") == 0) { return builtin_operation_times(numbers); }
-  if(strcmp(operator, "/") == 0) { return builtin_operation_divide(numbers); }
+  lval* result = lval_pop(value, 0);
 
-  return lval_error("Unrecognized operator");
+  while(value->count) {
+    result = lval_join(result, lval_pop(value, 0));
+  }
+
+  return result;
 }
 
 lval* lval_eval(lval* value);
+
+lval* builtin_eval(lval* value) {
+  if(value->count != 1)         { return lval_error("Function eval expects one argument"); }
+  if(value->type == LVAL_QEXPR) { return lval_error("Function eval called with incorect datatype"); }
+
+  lval* result = lval_pop(value, 0);
+  result->type = LVAL_SEXPR;
+
+  return lval_eval(result);
+}
+
+lval* builtin(char* operator, lval* elements) {
+  if(strcmp(operator, "+") == 0)    { return builtin_plus(elements);   }
+  if(strcmp(operator, "-") == 0)    { return builtin_minus(elements);  }
+  if(strcmp(operator, "*") == 0)    { return builtin_times(elements);  }
+  if(strcmp(operator, "/") == 0)    { return builtin_divide(elements); }
+  if(strcmp(operator, "list") == 0) { return builtin_list(elements);   }
+  if(strcmp(operator, "head") == 0) { return builtin_head(elements);   }
+  if(strcmp(operator, "tail") == 0) { return builtin_tail(elements);   }
+  if(strcmp(operator, "join") == 0) { return builtin_join(elements);   }
+  if(strcmp(operator, "eval") == 0) { return builtin_eval(elements);   }
+
+  return lval_error("Unrecognized operator");
+}
 
 lval* lval_eval_sexpr(lval* value) {
   /* evaluate every child */
@@ -240,7 +337,7 @@ lval* lval_eval_sexpr(lval* value) {
     return lval_error("S-expression Does not start with symbol!");
   }
 
-  lval* result = builtin_operation(f->symbol, value);
+  lval* result = builtin(f->symbol, value);
   lval_delete(f);
   lval_delete(value);
   return result;
@@ -262,13 +359,6 @@ lval* lval_read_number(mpc_ast_t *t) {
   long number = strtol(t->contents, NULL, 10);
 
   return errno != ERANGE ? lval_number(number) : lval_error("invalid number");
-}
-
-lval* lval_add(lval* a, lval* b) {
-  a->count++;
-  a->cell = realloc(a->cell, sizeof(lval*) * a->count);
-  a->cell[a->count-1] = b;
-  return a;
 }
 
 lval* lval_read(mpc_ast_t *t) {
@@ -305,7 +395,15 @@ int main(int argc, char **argv) {
   mpca_lang(MPCA_LANG_DEFAULT,
     "                                                  \
     number : /-?[0-9]+/ ;                              \
-    symbol : '+' | '-' | '*' | '/' ;                   \
+    symbol : \"list\"                                  \
+           | \"head\"                                  \
+           | \"tail\"                                  \
+           | \"join\"                                  \
+           | \"eval\"                                  \
+           | '+'                                       \
+           | '-'                                       \
+           | '*'                                       \
+           | '/' ;                                     \
     sexpr  : '(' <expr>* ')' ;                         \
     qexpr  : '{' <expr>* '}' ;                         \
     expr   : <number> | <symbol> | <sexpr> | <qexpr> ; \
