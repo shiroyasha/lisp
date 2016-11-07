@@ -5,7 +5,7 @@
 /* constructors */
 
 lval* lval_number(long number);
-lval* lval_error(char* error_description);
+lval* lval_error(char* format, ...);
 lval* lval_symbol(char* symbol);
 lval* lval_sexpr(void);
 lval* lval_qexpr(void);

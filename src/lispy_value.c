@@ -10,11 +10,24 @@ lval* lval_number(long number) {
   return value;
 }
 
-lval* lval_error(char* error_description) {
+lval* lval_error(char* format, ...) {
   lval* value = malloc(sizeof(lval));
   value->type = LVAL_ERR;
-  value->error = malloc(strlen(error_description) + 1);
-  strcpy(value->error, error_description);
+
+  va_list va;
+  va_start(va, format);
+
+  /* set maximux error description size to 512 bytes */
+  value->error = malloc(512);
+
+  /* populate the error description */
+  vsnprintf(value->error, 511, format, va);
+
+  /* release unnused memory */
+  value->error = realloc(value->error, strlen(value->error) + 1);
+
+  va_end(va);
+
   return value;
 }
 
