@@ -4,7 +4,7 @@
 #include <editline/readline.h>
 #include <editline/history.h>
 
-#include "src/lispy.h"
+#include "lispy.h"
 
 void evaluate(mpc_parser_t* parser, lenv* env, char* code) {
   mpc_result_t result;
