@@ -70,23 +70,21 @@ int main(int argc, char **argv) {
     char* input = readline("lispy> ");
     add_history(input);
 
-    mpc_result_t result;
-
-    if(mpc_parse("<stdin>", input, Lispy, &result)) {
-      lval* value = lval_eval(env, lval_read(result.output));
-      lval_println(value);
-      lval_delete(value);
-      mpc_ast_delete(result.output);
-    } else {
-      mpc_err_print(result.error);
-      mpc_err_delete(result.error);
-    }
-
+    lval* value = lispy_eval(Lispy, env, input);
+    lval_println(value);
+    lval_delete(value);
     free(input);
   }
 
-  mpc_cleanup(5, Number, Symbol, SExpression, QExpression, Expression, Lispy);
   lenv_delete(env);
+
+  mpc_cleanup(5,
+      Number,
+      Symbol,
+      SExpression,
+      QExpression,
+      Expression,
+      Lispy);
 
   return 0;
 }
