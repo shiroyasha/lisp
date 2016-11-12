@@ -2,6 +2,7 @@
 
 #include "mpc.h"
 
+#include "lispy_parser.h"
 #include "lispy_types.h"
 #include "lispy_env.h"
 #include "lispy_value.h"

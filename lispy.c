@@ -6,42 +6,8 @@
 
 #include "lispy.h"
 
-void evaluate(mpc_parser_t* parser, lenv* env, char* code) {
-  mpc_result_t result;
-
-  if(mpc_parse("<stdin>", code, parser, &result)) {
-    lval* value = lval_eval(env, lval_read(result.output));
-    lval_delete(value);
-    mpc_ast_delete(result.output);
-  } else {
-    printf("error\n");
-    exit(1);
-  }
-}
-
-void define_stdlib(mpc_parser_t* parser, lenv* env) {
-  evaluate(parser, env, "def {fun} (\\ {args body} {def (list (head args)) (\\ (tail args) body)})");
-}
-
 int main(int argc, char **argv) {
-  mpc_parser_t* Number      = mpc_new("number");
-  mpc_parser_t* Symbol      = mpc_new("symbol");
-  mpc_parser_t* SExpression = mpc_new("sexpr");
-  mpc_parser_t* QExpression = mpc_new("qexpr");
-  mpc_parser_t* Expression  = mpc_new("expr");
-  mpc_parser_t* Lispy       = mpc_new("lispy");
-
-  mpca_lang(MPCA_LANG_DEFAULT,
-    "                                                  \
-    number : /-?[0-9]+/ ;                              \
-    symbol : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ;        \
-    sexpr  : '(' <expr>* ')' ;                         \
-    qexpr  : '{' <expr>* '}' ;                         \
-    expr   : <number> | <symbol> | <sexpr> | <qexpr> ; \
-    lispy  : /^/ <expr>* /$/ ;                         \
-    ",
-    Number, Symbol, SExpression, QExpression, Expression, Lispy);
-
+  lparser* parser = lparser_new();
   lenv* env = lenv_new();
 
   /* Mathematical Functions */
@@ -61,7 +27,7 @@ int main(int argc, char **argv) {
   lenv_add_builtin(env, "def", builtin_def);
   lenv_add_builtin(env, "\\", builtin_lambda);
 
-  define_stdlib(Lispy, env);
+  lispy_eval(parser->mpc_parsers[5], env, "def {fun} (\\ {args body} {def (list (head args)) (\\ (tail args) body)})");
 
   puts("Lispy Version 0.1.0");
   puts("Hit Ctrl+c to Exit\n");
@@ -70,21 +36,14 @@ int main(int argc, char **argv) {
     char* input = readline("lispy> ");
     add_history(input);
 
-    lval* value = lispy_eval(Lispy, env, input);
+    lval* value = lispy_eval(parser->mpc_parsers[5], env, input);
     lval_println(value);
     lval_delete(value);
     free(input);
   }
 
   lenv_delete(env);
-
-  mpc_cleanup(5,
-      Number,
-      Symbol,
-      SExpression,
-      QExpression,
-      Expression,
-      Lispy);
+  lparser_destroy(parser);
 
   return 0;
 }
