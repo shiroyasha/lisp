@@ -9,3 +9,4 @@
 #include "lispy_builtin.h"
 #include "lispy_eval.h"
 #include "lispy_reader.h"
+#include "lispy_core.h"
