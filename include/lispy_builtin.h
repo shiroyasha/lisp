@@ -15,3 +15,4 @@ lval* builtin_eval(lenv* env, lval* value);
 
 lval* builtin_def(lenv* env, lval* value);
 lval* builtin_lambda(lenv* env, lval* value);
+lval* builtin_do(lenv* env, lval* value);

@@ -174,3 +174,22 @@ lval* builtin_lambda(lenv* env, lval* value) {
 
   return lval_lambda(symbol_list, body);
 }
+
+lval* builtin_do(lenv* env, lval* value) {
+  if(value->count == 0) { return lval_error("Function do expects at least one argument"); }
+
+  for (int i = 0; i < value->count; i++) {
+    if(value->cell[i]->type != LVAL_QEXPR) { return lval_error("Function do called with wrong datatype"); }
+  }
+
+  lval* result = NULL;
+
+  while(value->count) {
+    lval* block = lval_pop(value, 0);
+    block->type = LVAL_SEXPR;
+
+    result = lval_eval(env, block);
+  }
+
+  return result;
+}

@@ -18,5 +18,7 @@ void define_core_functions(lparser* parser, lenv* env) {
   lenv_add_builtin(env, "def", builtin_def);
   lenv_add_builtin(env, "\\", builtin_lambda);
 
+  lenv_add_builtin(env, "do", builtin_do);
+
   lispy_eval(parser, env, "def {fun} (\\ {args body} {def (list (head args)) (\\ (tail args) body)})");
 }
