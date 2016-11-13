@@ -1,6 +1,6 @@
 #include "lispy.h"
 
-void repl_start(lparser* parser, lenv* env) {
+void repl_start(lprogram* program) {
   puts("Lispy Version 0.1.0");
   puts("Hit Ctrl+c to Exit\n");
 
@@ -8,7 +8,7 @@ void repl_start(lparser* parser, lenv* env) {
     char* input = readline("lispy> ");
     add_history(input);
 
-    lval* value = lispy_eval(parser, env, input);
+    lval* value = lispy_eval(program->parser, program->env, input);
     lval_println(value);
     lval_delete(value);
     free(input);

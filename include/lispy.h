@@ -10,4 +10,5 @@
 #include "lispy_eval.h"
 #include "lispy_reader.h"
 #include "lispy_core.h"
+#include "lispy_program.h"
 #include "lispy_repl.h"

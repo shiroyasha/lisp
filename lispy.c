@@ -1,15 +1,11 @@
 #include "lispy.h"
 
 int main(int argc, char **argv) {
-  lparser* parser = lparser_new();
-  lenv* env = lenv_new();
+  lprogram* program = lprogram_new();
 
-  define_core_functions(parser, env);
+  repl_start(program);
 
-  repl_start(parser, env);
-
-  lenv_delete(env);
-  lparser_destroy(parser);
+  lprogram_destroy(program);
 
   return 0;
 }
