@@ -10,6 +10,10 @@ lval* lval_call(lenv* env, lval* fun, lval* arguments) {
   int given = arguments->count;
   int expected = fun->formals->count;
 
+  puts("Evaluating");
+  lval_println(fun);
+  lval_println(arguments);
+
   /* raise error if not enough arguments were passed */
   if(given != expected) { return lval_error("Function called with non adequate number of arguments"); }
 
@@ -27,7 +31,11 @@ lval* lval_call(lenv* env, lval* fun, lval* arguments) {
 
   lval* code = lval_add(lval_sexpr(), lval_copy(fun->body));
 
-  return builtin_eval(fun->env, code);
+  lval* result = builtin_eval(fun->env, code);
+
+  puts("Result");
+  lval_println(result);
+  return result;
 }
 
 lval* lval_eval_sexpr(lenv* env, lval* value) {
