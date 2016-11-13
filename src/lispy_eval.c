@@ -73,20 +73,10 @@ lval* lval_eval(lenv* env, lval* value) {
   return value;
 }
 
-lval* lispy_eval(mpc_parser_t* parser, lenv* env, char* code) {
-  mpc_result_t parsing_result;
+lval* lispy_eval(lparser* parser, lenv* env, char* source_code) {
+  lval* result = lparser_parse(parser, source_code);
 
-  lval* result;
-
-  if(mpc_parse("<stdin>", code, parser, &parsing_result)) {
-    result = lval_eval(env, lval_read(parsing_result.output));
-
-    mpc_ast_delete(parsing_result.output);
-  } else {
-    result = lval_error("Incorect syntaxt");
-
-    mpc_err_delete(parsing_result.error);
-  }
+  result = lval_eval(env, result);
 
   return result;
 }

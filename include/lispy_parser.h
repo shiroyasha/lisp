@@ -12,4 +12,4 @@ struct lparser {
 lparser* lparser_new();
 void lparser_destroy(lparser* parser);
 
-/* lparser* lparser_parse(lparser* parser, char* input); */
+lval* lparser_parse(lparser* parser, char* input);

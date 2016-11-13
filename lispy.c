@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   lenv_add_builtin(env, "def", builtin_def);
   lenv_add_builtin(env, "\\", builtin_lambda);
 
-  lispy_eval(parser->mpc_parsers[5], env, "def {fun} (\\ {args body} {def (list (head args)) (\\ (tail args) body)})");
+  lispy_eval(parser, env, "def {fun} (\\ {args body} {def (list (head args)) (\\ (tail args) body)})");
 
   puts("Lispy Version 0.1.0");
   puts("Hit Ctrl+c to Exit\n");
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     char* input = readline("lispy> ");
     add_history(input);
 
-    lval* value = lispy_eval(parser->mpc_parsers[5], env, input);
+    lval* value = lispy_eval(parser, env, input);
     lval_println(value);
     lval_delete(value);
     free(input);

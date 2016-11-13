@@ -45,3 +45,21 @@ void lparser_destroy(lparser* parser) {
   free(parser->mpc_parsers);
   free(parser);
 }
+
+lval* lparser_parse(lparser* parser, char* source_code) {
+  mpc_result_t parsing_result;
+
+  lval* result;
+
+  if(mpc_parse("<stdin>", source_code, parser->mpc_parsers[5], &parsing_result)) {
+    result = lval_read(parsing_result.output);
+
+    mpc_ast_delete(parsing_result.output);
+  } else {
+    result = lval_error("Incorect syntaxt");
+
+    mpc_err_delete(parsing_result.error);
+  }
+
+  return result;
+}
