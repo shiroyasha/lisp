@@ -1,0 +1,9 @@
+(do
+
+  {fun {test a}
+    {test (puts (- a 1))}
+  }
+
+  {test 10}
+
+)

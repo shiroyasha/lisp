@@ -1,0 +1,4 @@
+(do
+  {fun {test a} {test (- a 1)}}
+  {test 5}
+)
